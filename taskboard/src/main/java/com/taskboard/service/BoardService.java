@@ -79,7 +79,11 @@ public class BoardService {
         broadcast(boardId, "LIST_CREATED", response);
         return response;
     }
-
+    @Transactional public void deleteList(Long boardId, Long listId)
+    {
+        getOwnedBoard(boardId);
+        BoardList list = listRepository.findById(listId) .orElseThrow(() -> new ResourceNotFoundException("List not found: " + listId));
+        listRepository.delete(list); broadcast(boardId, "LIST_DELETED", listId); }
     // ---------- Cards ----------
 
     @Transactional

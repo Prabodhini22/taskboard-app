@@ -57,4 +57,11 @@ public class BoardController {
         boardService.deleteCard(boardId, cardId);
         return ResponseEntity.noContent().build();
     }
+    @DeleteMapping("/{boardId}/lists/{listId}")
+    public ResponseEntity<Void> deleteList(@PathVariable Long boardId, @PathVariable Long listId)
+    {
+        boardService.deleteList(boardId, listId);
+        return ResponseEntity.noContent().build();
+    }
+
 }
