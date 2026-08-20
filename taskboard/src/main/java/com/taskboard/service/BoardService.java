@@ -97,9 +97,9 @@ public class BoardService {
         Card card = Card.builder()
                 .title(req.title())
                 .description(req.description())
+                .dueDate(req.dueDate())
                 .position(nextPosition)
-                .list(list)
-                .build();
+                .list(list) .build();
         card = cardRepository.save(card);
 
         CardResponse response = toCardResponse(card);
@@ -117,6 +117,7 @@ public class BoardService {
 
         if (req.title() != null) card.setTitle(req.title());
         if (req.description() != null) card.setDescription(req.description());
+        if (req.dueDate() != null) card.setDueDate(req.dueDate());
         if (req.position() != null) card.setPosition(req.position());
 
         if (req.listId() != null && !req.listId().equals(card.getList().getId())) {
@@ -169,5 +170,8 @@ public class BoardService {
         String assigneeName = c.getAssignee() != null ? c.getAssignee().getName() : null;
         return new CardResponse(c.getId(), c.getTitle(), c.getDescription(), c.getPosition(),
                 c.getList().getId(), assigneeId, assigneeName, c.getUpdatedAt());
+        return new CardResponse(c.getId(), c.getTitle(), c.getDescription(),
+                c.getPosition(), c.getList().getId(), assigneeId, assigneeName,
+                c.getDueDate(), c.getUpdatedAt());
     }
 }

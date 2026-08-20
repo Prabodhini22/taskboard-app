@@ -15,10 +15,9 @@ public class BoardDtos {
 
     public record ListResponse(Long id, String title, Integer position, List<CardResponse> cards) {}
 
-    public record CreateCardRequest(@NotBlank String title, String description) {}
+    public record CreateCardRequest(@NotBlank String title, String description, java.time.LocalDate dueDate) {}
 
-    public record UpdateCardRequest(String title, String description, Long listId, Integer position, Long assigneeId) {}
+    public record UpdateCardRequest(String title, String description, Long listId, Integer position, Long assigneeId, java.time.LocalDate dueDate) {}
 
-    public record CardResponse(Long id, String title, String description, Integer position,
-                                Long listId, Long assigneeId, String assigneeName, Instant updatedAt) {}
+    public record CardResponse(Long id, String title, String description, Integer position, Long listId, Long assigneeId, String assigneeName, java.time.LocalDate dueDate, Instant updatedAt) {}
 }

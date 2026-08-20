@@ -27,6 +27,7 @@ public class Card {
 
     @Column(nullable = false)
     private Integer position; // ordering within a list
+    private java.time.LocalDate dueDate; // optional, nullable
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "list_id", nullable = false)
