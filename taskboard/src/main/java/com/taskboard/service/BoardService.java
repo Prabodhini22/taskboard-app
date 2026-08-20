@@ -168,8 +168,6 @@ public class BoardService {
     private CardResponse toCardResponse(Card c) {
         Long assigneeId = c.getAssignee() != null ? c.getAssignee().getId() : null;
         String assigneeName = c.getAssignee() != null ? c.getAssignee().getName() : null;
-        return new CardResponse(c.getId(), c.getTitle(), c.getDescription(), c.getPosition(),
-                c.getList().getId(), assigneeId, assigneeName, c.getUpdatedAt());
         return new CardResponse(c.getId(), c.getTitle(), c.getDescription(),
                 c.getPosition(), c.getList().getId(), assigneeId, assigneeName,
                 c.getDueDate(), c.getUpdatedAt());
