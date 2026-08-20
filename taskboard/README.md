@@ -1,5 +1,12 @@
 # Taskboard — Backend (Spring Boot)
 
+**Live API:** 
+https://taskboard-app-ay48.onrender.com 
+**Frontend:** 
+https://taskboard-frontend-iota.vercel.app 
+Note: this free-tier instance spins down after inactivity — the first request after idle time may take 30-50s to respond.
+
+
 A mini-Trello style task board backend: boards → lists → cards, with JWT auth
 and real-time updates over WebSocket (STOMP).
 
