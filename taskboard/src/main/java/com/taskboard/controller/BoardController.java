@@ -1,5 +1,6 @@
 package com.taskboard.controller;
 
+import com.taskboard.dto.ActivityDtos.ActivityResponse;
 import com.taskboard.dto.BoardDtos.*;
 import com.taskboard.service.BoardService;
 import jakarta.validation.Valid;
@@ -32,23 +33,34 @@ public class BoardController {
         return boardService.getBoardDetail(boardId);
     }
 
+    @GetMapping("/{boardId}/activity")
+    public List<ActivityResponse> boardActivity(@PathVariable Long boardId) {
+        return boardService.getBoardActivity(boardId);
+    }
+
     @PostMapping("/{boardId}/lists")
     public ResponseEntity<ListResponse> createList(@PathVariable Long boardId,
-                                                     @Valid @RequestBody CreateListRequest req) {
+                                                   @Valid @RequestBody CreateListRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(boardService.createList(boardId, req));
+    }
+
+    @DeleteMapping("/{boardId}/lists/{listId}")
+    public ResponseEntity<Void> deleteList(@PathVariable Long boardId, @PathVariable Long listId) {
+        boardService.deleteList(boardId, listId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{boardId}/lists/{listId}/cards")
     public ResponseEntity<CardResponse> createCard(@PathVariable Long boardId,
-                                                     @PathVariable Long listId,
-                                                     @Valid @RequestBody CreateCardRequest req) {
+                                                   @PathVariable Long listId,
+                                                   @Valid @RequestBody CreateCardRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(boardService.createCard(boardId, listId, req));
     }
 
     @PatchMapping("/{boardId}/cards/{cardId}")
     public CardResponse updateCard(@PathVariable Long boardId,
-                                    @PathVariable Long cardId,
-                                    @RequestBody UpdateCardRequest req) {
+                                   @PathVariable Long cardId,
+                                   @RequestBody UpdateCardRequest req) {
         return boardService.updateCard(boardId, cardId, req);
     }
 
@@ -57,11 +69,4 @@ public class BoardController {
         boardService.deleteCard(boardId, cardId);
         return ResponseEntity.noContent().build();
     }
-    @DeleteMapping("/{boardId}/lists/{listId}")
-    public ResponseEntity<Void> deleteList(@PathVariable Long boardId, @PathVariable Long listId)
-    {
-        boardService.deleteList(boardId, listId);
-        return ResponseEntity.noContent().build();
-    }
-
 }

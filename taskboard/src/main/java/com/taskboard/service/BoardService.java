@@ -1,5 +1,6 @@
 package com.taskboard.service;
 
+import com.taskboard.dto.ActivityDtos.ActivityResponse;
 import com.taskboard.dto.BoardDtos.*;
 import com.taskboard.dto.BoardEvent;
 import com.taskboard.entity.*;
@@ -22,6 +23,7 @@ public class BoardService {
     private final BoardListRepository listRepository;
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
+    private final ActivityRepository activityRepository;
     private final CurrentUserProvider currentUserProvider;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -51,6 +53,13 @@ public class BoardService {
                 .toList();
     }
 
+    public List<ActivityResponse> getBoardActivity(Long boardId) {
+        getOwnedBoard(boardId); // ownership check
+        return activityRepository.findTop20ByBoardIdOrderByCreatedAtDesc(boardId).stream()
+                .map(this::toActivityResponse)
+                .toList();
+    }
+
     private Board getOwnedBoard(Long boardId) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found: " + boardId));
@@ -77,18 +86,26 @@ public class BoardService {
 
         ListResponse response = toListResponse(list);
         broadcast(boardId, "LIST_CREATED", response);
+        logActivity(board, boardId, "LIST_CREATED", "Created list \"" + list.getTitle() + "\"");
         return response;
     }
-    @Transactional public void deleteList(Long boardId, Long listId)
-    {
-        getOwnedBoard(boardId);
-        BoardList list = listRepository.findById(listId) .orElseThrow(() -> new ResourceNotFoundException("List not found: " + listId));
-        listRepository.delete(list); broadcast(boardId, "LIST_DELETED", listId); }
+
+    @Transactional
+    public void deleteList(Long boardId, Long listId) {
+        Board board = getOwnedBoard(boardId);
+        BoardList list = listRepository.findById(listId)
+                .orElseThrow(() -> new ResourceNotFoundException("List not found: " + listId));
+        String listTitle = list.getTitle();
+        listRepository.delete(list);
+        broadcast(boardId, "LIST_DELETED", listId);
+        logActivity(board, boardId, "LIST_DELETED", "Deleted list \"" + listTitle + "\"");
+    }
+
     // ---------- Cards ----------
 
     @Transactional
     public CardResponse createCard(Long boardId, Long listId, CreateCardRequest req) {
-        getOwnedBoard(boardId); // ownership check
+        Board board = getOwnedBoard(boardId); // ownership check
         BoardList list = listRepository.findById(listId)
                 .orElseThrow(() -> new ResourceNotFoundException("List not found: " + listId));
 
@@ -99,21 +116,24 @@ public class BoardService {
                 .description(req.description())
                 .dueDate(req.dueDate())
                 .position(nextPosition)
-                .list(list) .build();
+                .list(list)
+                .build();
         card = cardRepository.save(card);
 
         CardResponse response = toCardResponse(card);
         broadcast(boardId, "CARD_CREATED", response);
+        logActivity(board, boardId, "CARD_CREATED", "Created card \"" + card.getTitle() + "\" in \"" + list.getTitle() + "\"");
         return response;
     }
 
     @Transactional
     public CardResponse updateCard(Long boardId, Long cardId, UpdateCardRequest req) {
-        getOwnedBoard(boardId); // ownership check
+        Board board = getOwnedBoard(boardId); // ownership check
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found: " + cardId));
 
         boolean moved = false;
+        String targetListTitle = null;
 
         if (req.title() != null) card.setTitle(req.title());
         if (req.description() != null) card.setDescription(req.description());
@@ -124,6 +144,7 @@ public class BoardService {
             BoardList newList = listRepository.findById(req.listId())
                     .orElseThrow(() -> new ResourceNotFoundException("List not found: " + req.listId()));
             card.setList(newList);
+            targetListTitle = newList.getTitle();
             moved = true;
         }
 
@@ -136,22 +157,45 @@ public class BoardService {
         card = cardRepository.save(card);
         CardResponse response = toCardResponse(card);
         broadcast(boardId, moved ? "CARD_MOVED" : "CARD_UPDATED", response);
+
+        if (moved) {
+            logActivity(board, boardId, "CARD_MOVED", "Moved card \"" + card.getTitle() + "\" to \"" + targetListTitle + "\"");
+        } else {
+            logActivity(board, boardId, "CARD_UPDATED", "Updated card \"" + card.getTitle() + "\"");
+        }
+
         return response;
     }
 
     @Transactional
     public void deleteCard(Long boardId, Long cardId) {
-        getOwnedBoard(boardId); // ownership check
+        Board board = getOwnedBoard(boardId); // ownership check
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found: " + cardId));
+        String cardTitle = card.getTitle();
         cardRepository.delete(card);
         broadcast(boardId, "CARD_DELETED", cardId);
+        logActivity(board, boardId, "CARD_DELETED", "Deleted card \"" + cardTitle + "\"");
     }
 
     // ---------- helpers ----------
 
     private void broadcast(Long boardId, String type, Object payload) {
         messagingTemplate.convertAndSend("/topic/board/" + boardId, new BoardEvent(type, payload));
+    }
+
+    private void logActivity(Board board, Long boardId, String action, String description) {
+        Activity activity = Activity.builder()
+                .board(board)
+                .action(action)
+                .description(description)
+                .build();
+        activity = activityRepository.save(activity);
+        broadcast(boardId, "ACTIVITY_LOGGED", toActivityResponse(activity));
+    }
+
+    private ActivityResponse toActivityResponse(Activity a) {
+        return new ActivityResponse(a.getId(), a.getAction(), a.getDescription(), a.getCreatedAt());
     }
 
     private BoardResponse toBoardResponse(Board b) {
@@ -168,8 +212,7 @@ public class BoardService {
     private CardResponse toCardResponse(Card c) {
         Long assigneeId = c.getAssignee() != null ? c.getAssignee().getId() : null;
         String assigneeName = c.getAssignee() != null ? c.getAssignee().getName() : null;
-        return new CardResponse(c.getId(), c.getTitle(), c.getDescription(),
-                c.getPosition(), c.getList().getId(), assigneeId, assigneeName,
-                c.getDueDate(), c.getUpdatedAt());
+        return new CardResponse(c.getId(), c.getTitle(), c.getDescription(), c.getPosition(),
+                c.getList().getId(), assigneeId, assigneeName, c.getDueDate(), c.getUpdatedAt());
     }
 }
